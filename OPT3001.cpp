@@ -42,20 +42,22 @@
 	FC1 to FC0	-	Fault count bits. Read/write bits. Default “00” - the first fault will trigger the alert pin.
 */
 
-void opt3001::begin()
+void opt3001::begin(uint16_t int_pin)
 {
 	uint16_t writeByte = DEFAULT_CONFIG_100;
-	// Initialize Wire
+	_int_pin = int_pin;
 
+	pinMode(_int_pin, INPUT);
+
+	// Initialize Wire
 	// Use I2C module 1 (I2C1SDA & I2C1SCL per BoosterPack standard) and begin
-	
+
 	Wire.begin();
-	
-	
+
     /* Begin Tranmission at address of device on bus */
 	Wire.beginTransmission(slaveAdr);
 	/* Send Pointer Register Byte */
-	
+
 	Wire.write(CONFIG_REG);
 
 	/* Read*/
@@ -63,17 +65,15 @@ void opt3001::begin()
 	Wire.write((unsigned char)(writeByte&0x00FF));
 
 	/* Sends Stop */
-	Serial.println("before ending transmission");
 	Wire.endTransmission();
-	Serial.println("return to life");
 	return;
 }
 
 uint16_t opt3001::readRegister(uint8_t registerName)
 {
-	int8_t lsb;
-	int8_t msb;
-	int16_t result;
+	uint8_t lsb;
+	uint8_t msb;
+	uint16_t result;
 
 
 	// Initialize Wire
@@ -105,15 +105,12 @@ uint16_t opt3001::readRegister(uint8_t registerName)
 
 uint16_t opt3001::readManufacturerId()
 {
-
 	return readRegister(MANUFACTUREID_REG);
-	
 }
 
 uint16_t opt3001::readDeviceId()
 {
 	return readRegister(DEVICEID_REG);
-		
 }
 
 uint16_t opt3001::readConfigReg()
@@ -124,8 +121,6 @@ uint16_t opt3001::readConfigReg()
 uint16_t opt3001::readLowLimitReg()
 {
 	return readRegister(LOWLIMIT_REG);
-	
-	
 }
 
 uint16_t opt3001::readHighLimitReg()
@@ -133,61 +128,42 @@ uint16_t opt3001::readHighLimitReg()
 	return readRegister(HIGHLIMIT_REG);
 }
 
-
 uint32_t opt3001::readResult()
 {
 	uint16_t exponent = 0;
 	uint32_t result = 0;
-	int16_t raw;
+	uint16_t raw;
 	raw = readRegister(RESULT_REG);
-	
+
 	/*Convert to LUX*/
 	//extract result & exponent data from raw readings
 	result = raw&0x0FFF;
 	exponent = (raw>>12)&0x000F;
 
-	//convert raw readings to LUX
-	switch(exponent){
-		case 0: //*0.015625
-			result = result>>6;
-			break;
-		case 1: //*0.03125
-			result = result>>5;
-			break;
-		case 2: //*0.0625
-			result = result>>4;
-			break;
-		case 3: //*0.125
-			result = result>>3;
-			break;
-		case 4: //*0.25
-			result = result>>2;
-			break;
-		case 5: //*0.5
-			result = result>>1;
-			break;
-		case 6:
-			result = result;
-			break;
-		case 7: //*2
-			result = result<<1;
-			break;
-		case 8: //*4
-			result = result<<2;
-			break;
-		case 9: //*8
-			result = result<<3;
-			break;
-		case 10: //*16
-			result = result<<4;
-			break;
-		case 11: //*32
-			result = result<<5;
-			break;
-	}
-
+	result = (pow(2, exponent) * result) / 100;
 	return result;
-	
+}
+
+uint16_t opt3001::readRaw()
+{
+	return readRegister(RESULT_REG);
+}
+
+float opt3001::readLuxF()
+{
+	uint16_t exponent = 0;
+	uint16_t raw;
+	raw = readRegister(RESULT_REG);
+
+	/*Convert to LUX*/
+	//extract result & exponent data from raw readings
+
+	return ((raw & 0x0fff) << ((raw & 0xf000) >> 12)) * 0.01;
+}
+
+uint32_t opt3001::readLux()
+{
+	return readResult();
 }
 
 uint8_t opt3001::interruptPin()
