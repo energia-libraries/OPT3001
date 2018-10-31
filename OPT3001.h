@@ -24,6 +24,7 @@ class opt3001
 {
   private:
 	uint16_t _int_pin;
+	int ipow(int base, int exp);
   public:
 	/**
 	 * @brief Initialize the library.

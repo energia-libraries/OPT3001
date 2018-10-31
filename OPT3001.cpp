@@ -42,6 +42,22 @@
 	FC1 to FC0	-	Fault count bits. Read/write bits. Default “00” - the first fault will trigger the alert pin.
 */
 
+int opt3001::ipow(int base, int exp)
+{
+    int result = 1;
+    for (;;)
+    {
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+        if (!exp)
+            break;
+        base *= base;
+    }
+
+    return result;
+}
+
 void opt3001::begin(uint16_t int_pin)
 {
 	uint16_t writeByte = DEFAULT_CONFIG_100;
@@ -140,7 +156,7 @@ uint32_t opt3001::readResult()
 	result = raw&0x0FFF;
 	exponent = (raw>>12)&0x000F;
 
-	result = (pow(2, exponent) * result) / 100;
+	result = (ipow(2, exponent) * result) / 100;
 	return result;
 }
 
